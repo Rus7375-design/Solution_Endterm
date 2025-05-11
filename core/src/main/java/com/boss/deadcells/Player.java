@@ -6,13 +6,21 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import java.util.List;
+import com.boss.deadcells.items.Weapon;
+import com.boss.deadcells.items.WeaponFactory;
+import com.boss.deadcells.items.Bullet;
+
 
 public class Player {
+    private Weapon currentWeapon;
+    private boolean facingRight = true;
+
     private float x, y;
-    private float width = 32, height = 48;
+    private final float width = 32, height = 48;
     private float velocityY = 0;
-    private int health = 100;
-    private float speed = 200;
+    private final int maxHealth = 100;
+    private int health = maxHealth;
+    private final float speed = 200;
     private boolean onGround = false;
     private boolean attacking = false;
     private float attackCooldown = 0;
@@ -23,29 +31,55 @@ public class Player {
         this.x = startX;
         this.y = startY;
         texture = new Texture("player.png");
+        this.currentWeapon = WeaponFactory.create("sword"); // стартовое оружие
+
     }
 
     public void update(float delta, List<Platform> platforms) {
+
         float gravity = -800;
         float jumpPower = 400;
 
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) x -= speed * delta;
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) x += speed * delta;
 
+        // Горизонтальное движение с коллизией
+        float nextX = x;
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            nextX -= speed * delta;
+            facingRight = false;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            nextX += speed * delta;
+            facingRight = true;
+        }
+
+
+        Rectangle nextRect = new Rectangle(nextX, y, width, height);
+        boolean blocked = false;
+        for (Platform p : platforms) {
+            if (nextRect.overlaps(p.getBounds())) {
+                blocked = true;
+                break;
+            }
+        }
+        if (!blocked) x = nextX;
+
+        // Прыжок
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && onGround) {
             velocityY = jumpPower;
             onGround = false;
         }
 
+        // Гравитация
         velocityY += gravity * delta;
         y += velocityY * delta;
 
+        // Вертикальные коллизии
         Rectangle playerRect = new Rectangle(x, y, width, height);
         onGround = false;
-
         for (Platform p : platforms) {
-            if (playerRect.overlaps(p.getBounds()) && velocityY <= 0) {
-                y = p.getBounds().y + p.getBounds().height;
+            Rectangle platformRect = p.getBounds();
+            if (playerRect.overlaps(platformRect) && velocityY <= 0) {
+                y = platformRect.y + platformRect.height;
                 velocityY = 0;
                 onGround = true;
                 break;
@@ -61,10 +95,13 @@ public class Player {
         attackCooldown -= delta;
         if (attackCooldown <= 0) attacking = false;
     }
-
     public void render(SpriteBatch batch) {
         batch.draw(texture, x, y, width, height);
     }
+    public boolean isFacingRight() {
+        return facingRight;
+    }
+
 
     public boolean isAttacking() {
         return attacking;
@@ -72,11 +109,19 @@ public class Player {
 
     public void takeDamage(int damage) {
         health -= damage;
-        System.out.println("💔 Игрок получил урон! Осталось HP: " + health);
+        if (health < 0) health = 0;
     }
 
-    public int getHealth() {
+    public int getCurrentHealth() {
         return health;
+    }
+
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+
+    public boolean isFalling() {
+        return !onGround && y < -100;
     }
 
     public float getX() {
@@ -86,4 +131,9 @@ public class Player {
     public float getY() {
         return y + height / 2;
     }
+
+    public Weapon getWeapon() {
+        return currentWeapon;
+    }
+
 }
