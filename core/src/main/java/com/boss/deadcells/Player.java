@@ -8,8 +8,6 @@ import com.badlogic.gdx.math.Rectangle;
 import java.util.List;
 import com.boss.deadcells.items.Weapon;
 import com.boss.deadcells.items.WeaponFactory;
-import com.boss.deadcells.items.Bullet;
-
 
 public class Player {
     private Weapon currentWeapon;
@@ -31,17 +29,13 @@ public class Player {
         this.x = startX;
         this.y = startY;
         texture = new Texture("player.png");
-        this.currentWeapon = WeaponFactory.create("sword"); // стартовое оружие
-
+        this.currentWeapon = WeaponFactory.create("sword");
     }
 
     public void update(float delta, List<Platform> platforms) {
-
         float gravity = -800;
         float jumpPower = 400;
 
-
-        // Горизонтальное движение с коллизией
         float nextX = x;
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             nextX -= speed * delta;
@@ -51,7 +45,6 @@ public class Player {
             nextX += speed * delta;
             facingRight = true;
         }
-
 
         Rectangle nextRect = new Rectangle(nextX, y, width, height);
         boolean blocked = false;
@@ -63,17 +56,14 @@ public class Player {
         }
         if (!blocked) x = nextX;
 
-        // Прыжок
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && onGround) {
             velocityY = jumpPower;
             onGround = false;
         }
 
-        // Гравитация
         velocityY += gravity * delta;
         y += velocityY * delta;
 
-        // Вертикальные коллизии
         Rectangle playerRect = new Rectangle(x, y, width, height);
         onGround = false;
         for (Platform p : platforms) {
@@ -86,22 +76,32 @@ public class Player {
             }
         }
 
-        // Атака
         if (Gdx.input.isKeyJustPressed(Input.Keys.F) && attackCooldown <= 0) {
             attacking = true;
             attackCooldown = 0.5f;
+            currentWeapon.use(this);
         }
 
         attackCooldown -= delta;
         if (attackCooldown <= 0) attacking = false;
     }
+
     public void render(SpriteBatch batch) {
         batch.draw(texture, x, y, width, height);
     }
+
     public boolean isFacingRight() {
         return facingRight;
     }
 
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, width, height);
+    }
+
+    public void heal(int amount) {
+        health += amount;
+        if (health > maxHealth) health = maxHealth;
+    }
 
     public boolean isAttacking() {
         return attacking;
@@ -134,6 +134,10 @@ public class Player {
 
     public Weapon getWeapon() {
         return currentWeapon;
+    }
+    public void upgradeWeapon() {
+        System.out.println("🔧 Оружие улучшено!");
+        // можно увеличить урон или сменить оружие
     }
 
 }
