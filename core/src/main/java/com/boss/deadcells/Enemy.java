@@ -1,72 +1,108 @@
+// 📄 Enemy.java (добавлена отрисовка с размерами и обработка урона от пуль)
 package com.boss.deadcells;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
+import com.boss.deadcells.enemies.EnemyBehavior;
 import java.util.List;
 
-public class Enemy {
-    private float x, y;
-    private float width = 32, height = 64;
-    private float velocityY = 0;
-    private float gravity = -500;
-    private float speed = 50;
+public abstract class Enemy {
+    protected float x, y;
+    protected float velocityY = 0;
+    protected boolean onGround = false;
+    protected int health;
+    protected int maxHealth;
+    protected Texture texture;
+    protected boolean recentlyHit = false;
+    protected EnemyBehavior behavior;
+    protected float speed = 80f;
+    protected float attackCooldown = 0;
 
-    private Texture texture;
-    private boolean facingRight = true;
-    private int health = 30;
-
-    public Enemy(float x, float y) {
+    public Enemy(float x, float y, int health, String texturePath) {
         this.x = x;
         this.y = y;
-        this.texture = new Texture("enemy.png");
+        this.health = this.maxHealth = health;
+        this.texture = new Texture(texturePath);
     }
 
-    public void update(float delta, Player player, List<Platform> platforms) {
+    public void updateMovement(float delta, Player player, List<Platform> platforms) {
+        float gravity = -800;
         velocityY += gravity * delta;
-        y += velocityY * delta;
 
-        boolean onGround = false;
-        Platform currentPlatform = null;
+        float direction = player.getX() > x ? 1 : -1;
+        float nextX = x + direction * speed * delta;
+        float nextY = y + velocityY * delta;
 
-        for (Platform platform : platforms) {
-            if (x + width > platform.getX() && x < platform.getX() + platform.getWidth()) {
-                if (y > platform.getY() && y + velocityY * delta <= platform.getY() + platform.getHeight()) {
-                    y = platform.getY() + platform.getHeight();
+        Rectangle bounds = new Rectangle(nextX, nextY, getWidth(), getHeight());
+        onGround = false;
+
+        for (Platform p : platforms) {
+            if (bounds.overlaps(p.getBounds())) {
+                if (y > p.getY()) {
+                    nextY = p.getY() + p.getHeight();
                     velocityY = 0;
                     onGround = true;
-                    currentPlatform = platform;
-                    break;
+                } else if (x < p.getX()) {
+                    nextX = p.getX() - getWidth();
+                } else {
+                    nextX = p.getX() + p.getWidth();
                 }
             }
         }
 
-        if (onGround) {
-            float distanceToPlayer = Math.abs(player.getX() - x);
-            if (distanceToPlayer < 150) {
-                float nextX = x + (player.getX() < x ? -speed : speed) * delta;
-                if (currentPlatform != null &&
-                    nextX >= currentPlatform.getX() &&
-                    nextX + width <= currentPlatform.getX() + currentPlatform.getWidth()) {
-                    x = nextX;
-                    facingRight = player.getX() >= x;
-                }
-            }
+        if (onGround && Math.abs(player.getX() - x) < 300) {
+            x += direction * speed * delta;
+        }
+
+        if (onGround && Math.abs(player.getX() - x) < 150 && Math.abs(player.getY() - y) > 30) {
+            velocityY = 400;
+        }
+
+        x = nextX;
+        y = nextY;
+
+        // атака при касании каждые 2 секунды
+        attackCooldown -= delta;
+        if (getBounds().overlaps(player.getBounds()) && attackCooldown <= 0) {
+            player.takeDamage(10);
+            attackCooldown = 2f;
         }
     }
 
-    public void takeDamage(int damage) {
-        health -= damage;
-        System.out.println("💀 Враг получил урон! Осталось HP: " + health);
-        if (health <= 0) {
-            x = -9999;
-            y = -9999;
-        }
+    public boolean isDead() {
+        return health <= 0;
+    }
+
+    public void takeDamage(int dmg) {
+        health -= dmg;
+        recentlyHit = true;
+    }
+
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, getWidth(), getHeight());
     }
 
     public float getX() { return x; }
     public float getY() { return y; }
+    public float getWidth() { return 32; }
+    public float getHeight() { return 48; }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    public abstract void update(float delta, Player player, List<Platform> platforms);
 
     public void render(SpriteBatch batch) {
-        batch.draw(texture, x, y, width, height);
+        batch.draw(texture, x, y, getWidth(), getHeight());
+    }
+
+    public void dispose() {
+        texture.dispose();
     }
 }

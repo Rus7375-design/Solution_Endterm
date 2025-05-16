@@ -8,11 +8,14 @@ import com.badlogic.gdx.math.Rectangle;
 import java.util.List;
 import com.boss.deadcells.items.Weapon;
 import com.boss.deadcells.items.WeaponFactory;
+import com.boss.deadcells.states.*;
+import com.boss.deadcells.observer.*;
+import java.util.ArrayList;
 
 public class Player {
     private Weapon currentWeapon;
     private boolean facingRight = true;
-
+    private PlayerState state = new IdleState();
     private float x, y;
     private final float width = 32, height = 48;
     private float velocityY = 0;
@@ -22,7 +25,7 @@ public class Player {
     private boolean onGround = false;
     private boolean attacking = false;
     private float attackCooldown = 0;
-
+    private List<GameObserver> observers = new ArrayList<>();
     private Texture texture;
 
     public Player(float startX, float startY) {
@@ -33,6 +36,8 @@ public class Player {
     }
 
     public void update(float delta, List<Platform> platforms) {
+        state.handleInput(this, delta);
+        state.update(this, delta);
         float gravity = -800;
         float jumpPower = 400;
 
@@ -124,6 +129,12 @@ public class Player {
         return !onGround && y < -100;
     }
 
+    public void setPosition(float x, float y) {
+        this.x = x;
+        this.y = y;
+    }
+
+
     public float getX() {
         return x + width / 2;
     }
@@ -139,5 +150,23 @@ public class Player {
         System.out.println("🔧 Оружие улучшено!");
         // можно увеличить урон или сменить оружие
     }
-
+    public void setState(PlayerState newState) {
+        this.state = newState;
+    }
+    public String getStateName() {
+        return state.getName();
+    }
+    public void addObserver(GameObserver obs) {
+        observers.add(obs);
+    }
+    private void notifyDamage() {
+        for (GameObserver obs : observers) {
+            obs.onPlayerDamaged(health);
+        }
+    }
+    private void notifyPickup(String itemName) {
+        for (GameObserver obs : observers) {
+            obs.onItemPicked(itemName);
+        }
+    }
 }

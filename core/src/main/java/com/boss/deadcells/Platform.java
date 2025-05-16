@@ -18,7 +18,7 @@ public class Platform {
     }
 
     public Rectangle getBounds() {
-        return bounds;
+        return new Rectangle(getX(), getY(), getWidth(), getHeight());
     }
     public float getX() {
         return bounds.x;
@@ -27,6 +27,10 @@ public class Platform {
     public float getY() {
         return bounds.y;
     }
+    public void dispose() {
+        texture.dispose();
+    }
+
 
     public float getWidth() {
         return bounds.width;
@@ -35,5 +39,6 @@ public class Platform {
     public float getHeight() {
         return bounds.height;
     }
+
 
 }
